@@ -1,0 +1,144 @@
+---
+title: "Exploration - Mantel correlogram - YVB"
+author: "Johan Ludot"
+date: "13/02/2024"
+output: html_document
+---
+
+```{r message=FALSE, warning=TRUE}
+
+# Load packages ----
+
+library(LandGenCourse)
+library(GeNetIt)
+library(dplyr)
+library(EcoGenetics)
+library(raster)
+library(ggplot2)
+library(adegenet)
+library(poppr)
+
+```
+
+
+
+```{r Loading data}
+#setwd("~/GDS_YVB/R code/")
+setwd("C:/Users/bigri/Desktop/RESEARCH/YVB/analysis")
+load(file = "YVB.Rdata")
+#genind_YVB <- missingno(genind_YVB_og, type = "loci")
+genind_YVB <- missingno(genind_YVB_og, type = "mean") #change to mean by HCL
+```
+
+## 
+
+```{r Individual-level metrics Dps and pairwise distance as matrix/dist/vector}
+ind.propShared <- adegenet::propShared(genind_YVB)
+Dps = 1 - ind.propShared
+Dps.dist <- as.dist(Dps)
+Dps.vector <- as.vector(Dps.dist)
+
+yvb_coords <- genind_YVB@other$xy
+coordinates <- SpatialPoints(yvb_coords, proj4string=CRS("+proj=longlat +datum=WGS84"))
+coordinates_utm <- spTransform(coordinates, CRS("+proj=utm +zone=48 +datum=WGS84"))
+yvb_Dgeo <- as.matrix(dist(coordinates_utm@coords,method = "euclidean", ))
+yvb_Dgeo.dist <- as.dist(yvb_Dgeo)
+yvb_dgeo_vector <- as.vector(yvb_Dgeo.dist)
+```
+
+
+```{r Genetic and geographic distances relationship representation}
+
+dens <- MASS::kde2d(log(yvb_dgeo_vector), Dps.vector, n=300)
+myPal <- colorRampPalette(c("white","blue","gold","orange","red"))
+plot(log(yvb_dgeo_vector), Dps.vector, pch=20, cex=0.5,  
+     xlab="Geographic Distance", ylab="Genetic Distance")
+image(dens, col=transp(myPal(300), 0.7), add=TRUE)
+abline(lm(Dps.vector ~ log(yvb_dgeo_vector)))
+lines(loess.smooth(log(yvb_dgeo_vector), Dps.vector), col="red")
+
+## Genetic distance stable a 0.14 throughout distances range
+
+```
+
+```{r Mantel test}
+
+yvb_IBD <- vegan::mantel(Dps.dist,log(yvb_Dgeo.dist), method="pearson")
+yvb_IBD <- vegan::mantel(Dps.dist,yvb_Dgeo.dist, method="spearman")
+
+yvb_IBD
+
+#no net increase between methods, low mantel statistic 0.06
+
+```
+
+```{r Mantel correlogram }
+
+yvb_corm <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                   XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                   alternative="less", method = "pearson")
+yvb_corm100 <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                       XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                       alternative="less", method = "pearson", size = 100)
+yvb_corm500 <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                       XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                       alternative="less", method = "pearson", size = 500)
+yvb_corm1000 <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                       XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                       alternative="less", method = "pearson", size = 1000)
+yvb_corm2000 <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                       XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                       alternative="less", method = "pearson", size = 2000)
+
+EcoGenetics::eco.plotCorrelog(yvb_corm)
+
+Lag1.def <- data.frame(rbind(Sturge = EcoGenetics::ecoslot.OUT(yvb_corm)[[1]][1,],
+                             size.100 = EcoGenetics::ecoslot.OUT(yvb_corm100)[[1]][1,],
+                             size.500 = EcoGenetics::ecoslot.OUT(yvb_corm500)[[1]][1,],
+                             size.1000 = EcoGenetics::ecoslot.OUT(yvb_corm1000)[[1]][1,],
+                             size.2000 = EcoGenetics::ecoslot.OUT(yvb_corm2000)[[1]][1,]
+                             ))
+Lag1.def$bin <- c(row.names(EcoGenetics::ecoslot.OUT(yvb_corm)[[1]])[1],
+                  row.names(EcoGenetics::ecoslot.OUT(yvb_corm100)[[1]])[1],
+                  row.names(EcoGenetics::ecoslot.OUT(yvb_corm500)[[1]])[1],
+                  row.names(EcoGenetics::ecoslot.OUT(yvb_corm1000)[[1]])[1],
+                  row.names(EcoGenetics::ecoslot.OUT(yvb_corm2000)[[1]])[1]
+                  )
+Lag1.def
+
+#Consistent signal at very short distance
+
+
+yvb_corm <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                   XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                   alternative="less", method = "pearson")
+yvb_corm.class10 <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                   XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                   alternative="less", method = "pearson", nclass = 10)
+yvb_corm.class50 <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                   XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                   alternative="less", method = "pearson", nclass = 20)
+yvb_corm.class100 <- EcoGenetics::eco.cormantel(M = Dps.dist, 
+                                   XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE, 
+                                   alternative="less", method = "pearson", nclass = )
+
+
+
+```
+
+```{r  }
+
+par(mfrow=c(2,2))
+hist(yvb_Dgeo.dist, nclass=40, main = "Sturge pairs per lag", axes=F)
+for(i in 1:length(EcoGenetics::ecoslot.BREAKS(yvb_corm))){
+  lines(rep(EcoGenetics::ecoslot.BREAKS(yvb_corm)[i], 2), c(0,50), col="blue")}
+hist(yvb_Dgeo.dist, nclass=40, main = "100 pairs per lag", axes=F)
+for(i in 1:length(EcoGenetics::ecoslot.BREAKS(yvb_corm100))){
+  lines(rep(EcoGenetics::ecoslot.BREAKS(yvb_corm100)[i], 2), c(0,50), col="blue")}
+hist(yvb_Dgeo.dist, nclass=40, main = "1000 pairs per lag", axes=F)
+for(i in 1:length(EcoGenetics::ecoslot.BREAKS(yvb_corm1000))){
+  lines(rep(EcoGenetics::ecoslot.BREAKS(yvb_corm1000)[i], 2), c(0,50), col="blue")}
+hist(yvb_Dgeo.dist, nclass=40, main = "2000 pairs per lag", axes=F)
+for(i in 1:length(EcoGenetics::ecoslot.BREAKS(yvb_corm2000))){
+  lines(rep(EcoGenetics::ecoslot.BREAKS(yvb_corm2000)[i], 2), c(0,50), col="blue")}
+```

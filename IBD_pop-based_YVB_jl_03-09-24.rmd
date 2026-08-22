@@ -1,0 +1,112 @@
+---
+title: "Mantel Test - Mantel correlogram - POP-level - YVB"
+author: "Johan Ludot"
+date: "03/09/2024"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r message=FALSE, echo=FALSE,warning=TRUE}
+# Load packages ----
+
+library(LandGenCourse)
+library(GeNetIt)
+library(dplyr)
+library(EcoGenetics)
+library(raster)
+library(ggplot2)
+library(adegenet)
+library(rmarkdown)
+library(yaml)
+library(poppr)
+```
+
+```{r}
+genind.mac3.thin_latlong <- file.choose()
+genind_YVB <- readRDS(genind.mac3.thin_latlong)
+genpop_YVB <- genind2genpop(genind_YVB)
+genpop_YVB
+```
+
+```{r Population-level metrics computation}
+#computation of 5 pop-level metrics
+GD.pop.Nei <- adegenet::dist.genpop(genpop_YVB, method=1)   
+GD.pop.Edwards <- adegenet::dist.genpop(genpop_YVB, method=2)
+GD.pop.Reynolds <- adegenet::dist.genpop(genpop_YVB, method=3)  
+GD.pop.Rogers <- adegenet::dist.genpop(genpop_YVB, method=4)  
+GD.pop.Provesti <- adegenet::dist.genpop(genpop_YVB, method=5)
+```
+
+```{r Population-level metrics correlation}
+GD.pop <- list(Nei.adegenet = GD.pop.Nei,
+               Edwards.adegenet = GD.pop.Edwards,
+               Reynolds.adegenet = GD.pop.Reynolds,
+               Rogers.adegenet = GD.pop.Rogers,
+               Provesti.adegenet = GD.pop.Provesti
+               )
+round(cor(sapply(GD.pop, function(ls) as.vector(ls))),2)[,1:2]
+#correlation are high between the 5 metrics, working with Edwards metric after on
+```
+
+
+```{r Distances between population (a list, matrix, and vector)}
+# computation of distances btw pop (as vector, matrix, list)
+allcoords <- genpop_YVB@other$xy
+popcoords <- unique(allcoords)
+
+coordinates <- SpatialPoints(popcoords, proj4string=CRS("+proj=longlat +datum=WGS84"))
+coordinates_utm <- spTransform(coordinates, CRS("+proj=utm +zone=48 +datum=WGS84"))
+Dgeo.mat <- as.matrix(dist(coordinates_utm@coords,method = "euclidean", ))
+Dgeo.dist <- as.dist(Dgeo.mat)
+Dgeo <- as.vector(Dgeo.dist)
+```
+
+```{r genetic distance (Edward metric) by log(distance)}
+# visual observation of relationship between genetic and geographic distances
+par(mar=c(4,4,0,0))
+
+Dgen <- as.vector(GD.pop$Edwards.adegenet)
+
+dens <- MASS::kde2d(log(Dgeo), Dgen, n=300)
+myPal <- colorRampPalette(c("white","blue","gold","orange","red"))
+plot(log(Dgeo), Dgen, pch=20, cex=0.5,  
+    xlab="Geographic Distance", ylab="Genetic Distance")
+image(dens, col=transp(myPal(300), 0.7), add=TRUE)
+abline(lm(Dgen ~ log(Dgeo)))
+lines(loess.smooth(log(Dgeo), Dgen), col="red")
+```
+
+```{r Mantel test IBD analysis}
+#Mantel test for IBD analysis
+Dgen_dist <- GD.pop$Edwards.adegenet
+
+IBD.pearson <- vegan::mantel(Dgen_dist,log(Dgeo.dist), method="pearson")
+IBD.spearman <- vegan::mantel(Dgen_dist,log(Dgeo.dist), method="spearman")
+IBD.pearson
+IBD.spearman
+#non significant and low mantel statistic score, with both methods
+```
+
+
+```{r Mantel correlogram}
+#Mantel correlogram
+corr.mantel <- EcoGenetics::eco.cormantel(M = GD.pop.Edwards, 
+                      XY = coordinates_utm@coords,  nsim = 199, latlon=FALSE,
+                      alternative="less")
+corr.mantel
+#no positive spatial autocorrelation at short distances which confirm the non significant results of Mantel test
+```
+
+```{r }
+
+eco.plotCorrelog(corr.mantel, interactivePlot = FALSE)
+#no positive spatial autocorrelation at short distances
+
+```
+
+```{r }
+
+#same results for logtransformed distance for mantel correlogram (not included here)
+
+```
