@@ -1,5 +1,6 @@
 #
 # Yellow-vented Bulbul abundance analysis
+# Statistical models of YVB abundance based on landcover type, model selection via AIC, and visualization
 # 
 # Jun 20, 2024
 #
