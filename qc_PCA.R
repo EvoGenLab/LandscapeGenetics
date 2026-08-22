@@ -1,5 +1,7 @@
 #
 # YVB PCA, sPCA, and AMOVA
+# With basic QC, including kinship
+# And some IBD and phylogenetic networks that aren't in the paper
 # 11 Sep 2023
 #
 # Will Brooks
