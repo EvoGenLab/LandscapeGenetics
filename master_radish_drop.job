@@ -1,0 +1,30 @@
+# /bin/sh 
+# ----------------Parameters---------------------- # 
+#$ -S /bin/sh 
+#$ -pe mthread 6
+#$ -q mThM.q
+#$ -l mres=60G,h_data=20G,h_vmem=20G,himem
+#$ -cwd 
+#$ -t 1-10
+#$ -j y 
+#$ -N radish_dropKB
+#$ -o radish_dropKB.$TASK_ID.log
+# 
+# ----------------Modules------------------------- # 
+module load tools/conda
+# 
+# ----------------Your Commands------------------- # 
+#
+echo + `date` job $JOB_NAME started in $QUEUE with jobID=$JOB_ID on $HOSTNAME 
+echo + NSLOTS = $NSLOTS
+# 
+
+OUT=radish_drop_KB/
+
+start-conda
+conda activate r-4.3.2
+Rscript --vanilla master_radish_drop.R veg5_merge78.tif KB $SGE_TASK_ID $OUT
+conda deactivate 
+
+# 
+echo = `date` job $JOB_NAME done
