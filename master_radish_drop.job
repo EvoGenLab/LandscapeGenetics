@@ -1,3 +1,5 @@
+# Script to run as a job array on the Smithsonian Hydra cluster
+
 # /bin/sh 
 # ----------------Parameters---------------------- # 
 #$ -S /bin/sh 
