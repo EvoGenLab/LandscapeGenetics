@@ -227,38 +227,3 @@ save.image(file="dropKB_visualizations.RData")
 
 
 
-
-
-h <- crs(radish_raw_lyr)
-new_sf <- st_transform(sgp_sf, crs=h)
-
-ggplot(raddat, aes(x=xval, y=yval, fill=vals)) +
-  geom_tile() +
-  theme_minimal() +
-  scale_fill_gradient2(low="#1E8E99", 
-                       mid="white", 
-                       high="#993F00", 
-                       midpoint=-15) +
-  coord_sf(crs=h) +
-  geom_sf(data=st_geometry(new_sf),
-          color = "black",
-          fill=NA,
-          inherit.aes=FALSE)
-
-# Stuf to do:
-# change values to average values
-# adjust color scheme as necessary
-# fix axis titles & grid lines
-# fix CRS
-# render in appropriate size
-
-
-
-#plot(log(radish_raw_lyr[["est"]]))
-#plot(st_geometry(new_sf), add=TRUE)
-#st_geometry(new_sf)
-#ggplot(st_geometry(new_sf)) + geom_polygon()
-
-
-
-
