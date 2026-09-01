@@ -1,4 +1,7 @@
-#
+# DEFUNCT - I believe everything in this script is covered in Johan's IBD and HC's population structure analysis and we didn't use this
+
+
+
 # Preliminary exploration of heterozygosity and genetic structure in YVB RADseq data
 # 2/2/24
 #
